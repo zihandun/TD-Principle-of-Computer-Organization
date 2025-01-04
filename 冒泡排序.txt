@@ -1,0 +1,180 @@
+;########################################################
+;-------------------- 输入数据到内存 --------------------    
+;程序首先从输入端口读入需要排序的 数据个数。
+;从 80H 地址开始，将输入的数据依次存储到内存中。
+;指针 R2 用于表示当前存储位置，R3 用于存储输入数据，R0 记录还需要输入的数的数量。
+;输入循环结束后，R2 指向输入数据的尾部，数据总个数存入 FFH。
+;
+;######################################################
+
+$P 00 20;   BEGIN:IN RO,00H 输入一共多少个数，即数据个数
+$P 01 00;
+$P 02 61;         LDI R1,01H    
+$P 03 01; 
+$P 04 62;         LDI R2,80H     从80H位置开始储存
+$P 05 80;            
+$P 06 23;   INPUT:IN R3,00H 循环输入数字，从80H位置依次存入
+$P 07 00;           
+$P 08 D2;         STA FE,R2
+$P 09 FE; 
+$P 0A D7;         STA[R2],R3
+$P 0B FE;             
+$P 0C 72;         INC R2         每次存储的位置+1
+$P 0D 84;         SUB RO,R1 
+$P 0E F0;         BZC NEXT若还没输入的数个数为零则跳转NEXT
+$P 0F 12;
+$P 10 E0;         JMP INPUT
+$P 11 06;
+
+
+$P 12 63;    NEXT:LDI R3,80H
+$P 13 80; 
+$P 14 8E;         SUB R2,R3
+$P 15 60;         LDI R0,FFH将输入个数的总数存入FFH 
+$P 16 FF;
+$P 17 D0;         STA FE,R0初始化R2为内循环数的个数
+$P 18 FE;
+$P 19 D6;         STA [R0],R2     使用FE单元间接寻址 
+$P 1A FE;
+$P 1B 60;         LDI R0,80H     以R0为指针，从80H开始
+$P 1C 80;
+$P 1D D0;CONTINUE:STA FE,R0      指针R0对应地址数给R1
+$P 1E FE;
+$P 1F C5;         LAD R1,[R0]    
+$P 20 FE;
+$P 21 70;         INC R0         指针R0加1
+$P 22 D0;         STA FE,R0      指针R0加1位置数给R3
+$P 23 FE;
+$P 24 C7;         LAD R3,[R0]
+$P 25 FE;
+$P 26 87;         SUB R3,R1      比较前一个数和后一个数
+$P 27 F0;         BZC CHANG前一个数大于后一个数则跳转 
+$P 28 34;
+$P 29 41;         MOV R1,R0
+$P 2A 63;         LDI R3 80H
+$P 2B 80;        
+$P 2C 8D;         SUB R1,R3      
+$P 2D 4B;         MOV R3,R2  
+$P 2E 71;         INC R1
+$P 2F 87;         SUB R3,R1若内循环排序排完，则跳转AGAIN
+$P 30 F0;         BZC AGAIN
+$P 31 4F;
+$P 32 E0;         JMP CONTINUE  内循环未完成则跳转COUNTINUE 
+$P 33 1D;
+$P 34 D0;  CHANGE:STA FE,R0   使用间接寻址把后一个数赋给R3
+$P 35 FE;
+$P 36 C7;         LAD R3,[R0] 
+$P 37 FE;
+$P 38 D0;         STA FE,R0
+$P 39 FE;
+$P 3A D5;         STA [R0],R1 把R1（即前一个数）给R0地址
+$P 3B FE;												的内存中
+$P 3C 61;         LDI  R1,01H
+$P 3D 01;
+$P 3E 84;         SUB R0,R1       指针R0减1
+$P 3F D0;         STA FE,R0     把R3（即后一个数）给R0
+$P 40 FE;										    地址的内存中
+$P 41 D7;         STA[R0],R3
+$P 42 FE;
+$P 43 70;         INC R0         指针R0加1
+$P 44 41;         MOV R1,R0 
+$P 45 63;         LDI R3 70H
+$P 46 80;        
+$P 47 8D;         SUB R1,R3
+$P 48 4B;         MOV R3,R2
+$P 49 71;         INC R1
+$P 4A 87;         SUB R3,R1
+$P 4B F0;         BZC AGAIN 内循环排序排完则跳转AGAIN  
+$P 4C 4F;
+$P 4D E0;         JMP COUNTINUE  交换完且内循环未结束跳转
+$P 4E 1D;												CONTINUE
+$P 4F 60;   AGAIN:LDI R0,80H      赋值指针R0为80H
+$P 50 80;
+$P 51 61;         LDI R1,01H
+$P 52 01;
+$P 53 86;         SUB R2,R1       剩余要排序的数减1  
+$P 54 4B;         MOV R3,R2 
+$P 55 87;         SUB R3,R1 判断剩余要排序数减一是否为零
+$P 56 F0;         BZC END1       外循环结束则跳转END1
+$P 57 5A;
+$P 58 E0;         JMP CONTINUE
+$P 59 1D;
+$P 5A 61;    END1:LDI R1,FFH
+$P 5B FF;
+$P 5C D1;         STA FE,R1
+$P 5D FE;
+$P 5E C6;     LAD R2,[R1]把存放在FFH中数个数的总数赋给R2
+$P 5F FE;
+$P 60 61;         LDI R1,00H  
+$P 61 00;
+$P 62 D0;    END2:STA FE,R0  从80H依次开始，赋值给R3
+$P 63 FE;
+$P 64 C7;         LAD R3,[R0]     
+$P 65 FE;
+$P 66 70;         INC R0
+$P 67 71;         INC R1
+$P 68 3C;         OUT 40H       将R3输出
+$P 69 40;         MOV R3,R2  
+$P 6A 4B;         SUB R3,R1 
+$P 6B 87;
+$P 6C F0;         BZC END3      输出循环完毕则跳转END3
+$P 6D 70;
+$P 6E E0;         JMP END输出循环未结束跳转END2继续输出
+$P 6F 62;
+$P 70 50;    END3:HALT           程序结束 
+
+
+$M 00 000001    ; NOP
+  $M 01 006D43    ; PC->AR, PC加1
+  $M 03 107070    ; MEM->IR, P<1>
+  $M 04 002405    ; RS->B
+  $M 05 04B201    ; A加B->RD
+  $M 06 002407    ; RS->B
+  $M 07 013201    ; A与B->RD
+  $M 08 106009    ; MEM->AR
+  $M 09 183001    ; IO->RD
+  $M 0A 106010    ; MEM->AR
+  $M 0B 000001    ; NOP
+  $M 0C 103001    ; MEM->RD
+  $M 0D 200601    ; RD->MEM
+  $M 0E 005341    ; A->PC
+  $M 0F 0000CB    ; NOP, P<3>
+  $M 10 280401    ; RS->IO
+  $M 11 103001    ; MEM->RD
+  $M 12 06B201    ; A加1->RD
+  $M 13 002414    ; RS->B
+  $M 14 05B201    ; A减B->RD
+  $M 15 002416    ; RS->B
+  $M 16 01B201    ; A或B->RD
+  $M 17 002418    ; RS->B
+  $M 18 02B201    ; A右环移->RD
+  $M 1B 005341    ; A->PC
+  $M 1C 10101D    ; MEM->A
+  $M 1D 10608C    ; MEM->AR, P<2>
+  $M 1E 10601F    ; MEM->AR
+  $M 1F 101020    ; MEM->A
+  $M 20 10608C    ; MEM->AR, P<2>
+  $M 28 101029    ; MEM->A
+  $M 29 00282A    ; RI->B
+  $M 2A 04E22B    ; A加B->AR
+  $M 2B 04928C    ; A加B->A, P<2>
+  $M 2C 10102D    ; MEM->A
+  $M 2D 002C2E    ; PC->B
+  $M 2E 04E22F    ; A加B->AR
+  $M 2F 04928C    ; A加B->A, P<2>
+  $M 30 001604    ; RD->A
+  $M 31 001606    ; RD->A
+  $M 32 006D48    ; PC->AR, PC加1
+  $M 33 006D4A    ; PC->AR, PC加1
+  $M 34 003401    ; RS->RD
+  $M 35 000035    ; NOP
+  $M 36 006D51    ; PC->AR, PC加1
+  $M 37 001612    ; RD->A
+  $M 38 001613    ; RD->A
+  $M 39 001615    ; RD->A
+  $M 3A 001617    ; RD->A
+  $M 3B 000001    ; NOP
+  $M 3C 006D5C    ; PC->AR, PC加1
+  $M 3D 006D5E    ; PC->AR, PC加1
+  $M 3E 006D68    ; PC->AR, PC加1
+  $M 3F 006D6C    ; PC->AR, PC加1
